@@ -1,0 +1,154 @@
+C51 COMPILER V9.59.0.0   MAIN                                                              06/15/2023 10:46:46 PAGE 1   
+
+
+C51 COMPILER V9.59.0.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: F:\Keil\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE INCDIR(F:\Keil\C51\INC;F:\Keil\C51\INC\STC)
+                    - DEBUG OBJECTEXTEND PRINT(.\Listings\main.lst) TABS(2) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include <STC89C5xRC.H>
+   2          #include "intrins.h"
+   3          #include "stdio.h"
+   4          #include "LCD1602.h"
+   5          sbit TX=P2^1;
+   6          sbit RX=P2^0;
+   7          unsigned int Timer_500ms=0;
+   8          unsigned char Timer_100ms=0;
+   9          unsigned char Timer_20ms=0;
+  10          unsigned char PWM=1;
+  11          void Timer0_Init(void)    //100微秒@11.0592MHz
+  12          {
+  13   1        TMOD &= 0xF0;     //设置定时器模式
+  14   1        TMOD |= 0x01;     //设置定时器模式
+  15   1        TL0 = 0x00;       //设置定时初始值
+  16   1        TH0 = 0x00;       //设置定时初始值
+  17   1      }
+  18          void UartInit(void)   //9600bps@11.0592MHz
+  19          {
+  20   1        PCON &= 0x7F;   //波特率不倍速
+  21   1        SCON = 0x50;    //8位数据,可变波特率
+  22   1        TMOD &= 0x0F;   //清除定时器1模式位
+  23   1        TMOD |= 0x20;   //设定定时器1为8位自动重装方式
+  24   1        TL1 = 0xFD;   //设定定时初值
+  25   1        TH1 = 0xFD;   //设定定时器重装值
+  26   1        ET1 = 0;    //禁止定时器1中断
+  27   1        TR1 = 1;    //启动定时器1
+  28   1      }
+  29          void Timer2_Init(){
+  30   1          T2MOD = 0;        //初始化模式寄存器
+  31   1          T2CON = 0;        //初始化控制寄存器
+  32   1          TL2 = 0x66;        //设置定时初始值
+  33   1          TH2 = 0xFC;        //设置定时初始值
+  34   1          RCAP2L = 0x66;        //设置定时重载值
+  35   1          RCAP2H = 0xFC;        //设置定时重载值
+  36   1          TR2 = 1;        //定时器2开始计时
+  37   1          PT2=0;            //感觉比定时器0快一些
+  38   1          EA=1;
+  39   1          ET2=1;
+  40   1      }
+  41          void Delay10us()    //@11.0592MHz
+  42          {
+  43   1        unsigned char i;
+  44   1        i = 2;
+  45   1        while (--i);
+  46   1      }
+  47          void Send_wave()
+  48          {
+  49   1        TX=0;
+  50   1        TX=1;
+  51   1        Delay10us();
+  52   1        TX=0;
+  53   1      }
+  54          float distance=0;
+C51 COMPILER V9.59.0.0   MAIN                                                              06/15/2023 10:46:46 PAGE 2   
+
+  55          void Sonic_get()
+  56          {
+  57   1        EA=0;
+  58   1        Send_wave();
+  59   1        while(RX == 0);
+  60   1        TR0 = 1;
+  61   1        while(RX == 1);
+  62   1        TR0 = 0;
+  63   1        distance = (TH0 * 256 + TL0)*1.085;
+  64   1        distance = distance * 0.017;
+  65   1        if(TF0==1)
+  66   1        {
+  67   2          TF0=0;
+  68   2          distance=999;
+  69   2        }
+  70   1        TH0 = 0;
+  71   1        TL0 = 0;
+  72   1        EA=1;
+  73   1      }
+  74          void Send_byte(unsigned char byte)
+  75          {
+  76   1        SBUF=byte;
+  77   1        while(TI==0);
+  78   1        TI=0;
+  79   1      }
+  80          char putchar(char c){
+  81   1        Send_byte(c);
+  82   1        return c;  
+  83   1      }
+  84          void main()
+  85          {
+  86   1        Timer0_Init();
+  87   1        Timer2_Init();
+  88   1      //  UartInit();
+  89   1        LCD_Init();
+  90   1        while(1)
+  91   1        {
+  92   2          if(Timer_100ms>=100)
+  93   2          {
+  94   3            //100ms
+  95   3            Sonic_get();
+  96   3            LCD_ShowString(1,1,"L=");
+  97   3            LCD_ShowNum(1,3,distance,3);
+  98   3            LCD_ShowString(1,6,"cm");
+  99   3            //
+ 100   3            Timer_100ms=0;
+ 101   3          }
+ 102   2      //    P12=1;
+ 103   2      //    P13=0;
+ 104   2      //    P14=0;
+ 105   2      //    P15=1;
+ 106   2      //    P16=1;
+ 107   2      //    P17=1;
+ 108   2        }
+ 109   1      }
+ 110          void Timer2_Routine() interrupt 5
+ 111          {
+ 112   1          TF2=0;
+ 113   1          Timer_500ms++;
+ 114   1          Timer_100ms++;
+ 115   1          Timer_20ms++;
+ 116   1          //1ms
+C51 COMPILER V9.59.0.0   MAIN                                                              06/15/2023 10:46:46 PAGE 3   
+
+ 117   1          
+ 118   1          //
+ 119   1          if(Timer_500ms>=500)
+ 120   1          {
+ 121   2              Timer_500ms=0;
+ 122   2              //500ms
+ 123   2              printf("distance=%f\r\n",distance);
+ 124   2              //
+ 125   2          }
+ 126   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    816    ----
+   CONSTANT SIZE    =     20    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      9      31
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
