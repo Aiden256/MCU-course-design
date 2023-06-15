@@ -1,0 +1,125 @@
+C51 COMPILER V9.59.0.0   MAIN                                                              06/15/2023 16:19:04 PAGE 1   
+
+
+C51 COMPILER V9.59.0.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: F:\Keil\C51\BIN\C51.EXE main.c COMPACT OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings
+                    -\main.lst) TABS(2) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include <STC89C5xRC.H>
+   2          #include "stdio.h"
+   3          #include "LCD1602.h"
+   4          #include "motor_driver.h"
+   5          unsigned int Left_count=0;
+   6          unsigned int Right_count=0;
+   7          float n_l=0;
+   8          float n_r=0;
+   9          unsigned int Timer_100ms=0;
+  10          unsigned int Timer_500ms=0;
+  11          unsigned char LCD_buf_1[16];
+  12          unsigned char LCD_buf_2[16];
+  13          void Timer2_Init(void)    //50微秒@11.0592MHz
+  14          {
+  15   1        T2MOD = 0;        //初始化模式寄存器
+  16   1        T2CON = 0;        //初始化控制寄存器
+  17   1        TL2 = 0xD2;       //设置定时初始值
+  18   1        TH2 = 0xFF;       //设置定时初始值
+  19   1        RCAP2L = 0xD2;      //设置定时重载值
+  20   1        RCAP2H = 0xFF;      //设置定时重载值
+  21   1        TR2 = 1;        //定时器2开始计时
+  22   1        ET2 = 1;        //使能定时器2中断
+  23   1        EA = 1;
+  24   1      }
+  25          void UartInit(void)   //9600bps@11.0592MHz
+  26          {
+  27   1        PCON &= 0x7F;   //波特率不倍速
+  28   1        SCON = 0x50;    //8位数据,可变波特率
+  29   1        TMOD &= 0x0F;   //清除定时器1模式位
+  30   1        TMOD |= 0x20;   //设定定时器1为8位自动重装方式
+  31   1        TL1 = 0xFD;   //设定定时初值
+  32   1        TH1 = 0xFD;   //设定定时器重装值
+  33   1        ET1 = 0;    //禁止定时器1中断
+  34   1        TR1 = 1;    //启动定时器1
+  35   1      }
+  36          void INT0_Init()
+  37          {
+  38   1        IT0 = 1;
+  39   1        EX0 = 1;
+  40   1      }
+  41          void INT1_Init()
+  42          {
+  43   1        IT1 = 1;
+  44   1        EX1 = 1;
+  45   1      }
+  46          void Send_byte(unsigned char byte)
+  47          {
+  48   1        SBUF=byte;
+  49   1        while(TI==0);
+  50   1        TI=0;
+  51   1      }
+  52          char putchar(char c){
+  53   1        Send_byte(c);
+  54   1        return c;  
+C51 COMPILER V9.59.0.0   MAIN                                                              06/15/2023 16:19:04 PAGE 2   
+
+  55   1      }
+  56          void main()
+  57          {
+  58   1        Timer2_Init();
+  59   1        INT0_Init();
+  60   1        INT1_Init();
+  61   1        UartInit();
+  62   1        LCD_Init();
+  63   1        wheel(left,5);
+  64   1        while(1)
+  65   1        {
+  66   2          LCD_ShowString(1,1,LCD_buf_1);
+  67   2          LCD_ShowString(2,1,LCD_buf_2);
+  68   2        }
+  69   1      }
+  70          void Timer2_Isr(void) interrupt 5
+  71          {
+  72   1        TF2 = 0;
+  73   1        Timer_100ms++;
+  74   1        Timer_500ms++;
+  75   1        if(Timer_100ms>2000)
+  76   1        {
+  77   2      //    printf("L=%0.1f,R=%0.1f",n_l,n_r);
+  78   2          Timer_100ms=0;
+  79   2        }
+  80   1        if(Timer_500ms>10000)
+  81   1        {
+  82   2          n_l=Left_count*0.1;
+  83   2          n_r=Right_count*0.1;
+  84   2          sprintf(LCD_buf_1,"L=%0.2fr/s",n_l);
+  85   2          sprintf(LCD_buf_2,"R=%0.2fr/s",n_r);
+  86   2          Left_count=0;
+  87   2          Right_count=0;
+  88   2          Timer_500ms=0;
+  89   2        }
+  90   1        pwm_output();
+  91   1      }
+  92          void INT0_Routine() interrupt 0
+  93          {
+  94   1        Left_count++;
+  95   1      }
+  96          void INT1_Routine() interrupt 2
+  97          {
+  98   1        Right_count++;
+  99   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1325    ----
+   CONSTANT SIZE    =     22    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =     58      34
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
