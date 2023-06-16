@@ -1,0 +1,135 @@
+C51 COMPILER V9.59.0.0   MAIN                                                              06/16/2023 18:06:41 PAGE 1   
+
+
+C51 COMPILER V9.59.0.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: F:\Keil\C51\BIN\C51.EXE main.c COMPACT OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings
+                    -\main.lst) TABS(2) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include <STC89C5xRC.H>
+   2          #include "stdio.h"
+   3          //#include "LCD1602.h"
+   4          #include "motor_driver.h"
+   5          unsigned int Left_count=0;
+   6          unsigned int Right_count=0;
+   7          float n_l=0;
+   8          float n_r=0;
+   9          unsigned int Timer_100ms=0;
+  10          unsigned int Timer_500ms=0;
+  11          //unsigned char LCD_buf_1[16];
+  12          //unsigned char LCD_buf_2[16];
+  13          void Timer2_Init(void)    //10微秒@11.0592MHz
+  14          {
+  15   1        T2MOD = 0;        //初始化模式寄存器
+  16   1        T2CON = 0;        //初始化控制寄存器
+  17   1        TL2 = 0xF7;       //设置定时初始值
+  18   1        TH2 = 0xFF;       //设置定时初始值
+  19   1        RCAP2L = 0xF7;      //设置定时重载值
+  20   1        RCAP2H = 0xFF;      //设置定时重载值
+  21   1        TR2 = 1;        //定时器2开始计时
+  22   1        ET2 = 1;        //使能定时器2中断
+  23   1        EA = 1;
+  24   1      }
+  25          //void Timer0_Init(void)    //50微秒@11.0592MHz
+  26          //{
+  27          //  TMOD &= 0xF0;     //设置定时器模式
+  28          //  TMOD |= 0x01;     //设置定时器模式
+  29          //  TL0 = 0xD2;       //设置定时初始值
+  30          //  TH0 = 0xFF;       //设置定时初始值
+  31          //  TF0 = 0;        //清除TF0标志
+  32          //  TR0 = 1;        //定时器0开始计时
+  33          //  ET0 = 1;        //使能定时器0中断
+  34          //  PT0=1;
+  35          //}
+  36          void UartInit(void)   //9600bps@11.0592MHz
+  37          {
+  38   1        PCON &= 0x7F;   //波特率不倍速
+  39   1        SCON = 0x50;    //8位数据,可变波特率
+  40   1        TMOD &= 0x0F;   //清除定时器1模式位
+  41   1        TMOD |= 0x20;   //设定定时器1为8位自动重装方式
+  42   1        TL1 = 0xFD;   //设定定时初值
+  43   1        TH1 = 0xFD;   //设定定时器重装值
+  44   1        ET1 = 0;    //禁止定时器1中断
+  45   1        TR1 = 1;    //启动定时器1
+  46   1      }
+  47          void INT0_Init()
+  48          {
+  49   1        IT0 = 1;
+  50   1        EX0 = 1;
+  51   1      }
+  52          void INT1_Init()
+  53          {
+  54   1        IT1 = 1;
+C51 COMPILER V9.59.0.0   MAIN                                                              06/16/2023 18:06:41 PAGE 2   
+
+  55   1        EX1 = 1;
+  56   1      }
+  57          void Send_byte(unsigned char byte)
+  58          {
+  59   1        SBUF=byte;
+  60   1        while(TI==0);
+  61   1        TI=0;
+  62   1      }
+  63          char putchar(char c){
+  64   1        Send_byte(c);
+  65   1        return c;  
+  66   1      }
+  67          void main()
+  68          {
+  69   1        Timer2_Init();
+  70   1        INT0_Init();
+  71   1        INT1_Init();
+  72   1        UartInit();
+  73   1        wheel(left,0);
+  74   1        while(1)
+  75   1        {
+  76   2      
+  77   2        }
+  78   1      }
+  79          void Timer2_Routine(void) interrupt 5
+  80          {
+  81   1        TF2 = 0;
+  82   1        Timer_100ms++;
+  83   1        Timer_500ms++;
+  84   1        if(Timer_100ms>1000)
+  85   1        {
+  86   2          n_l=Left_count;
+  87   2          n_r=Right_count;
+  88   2          PID_control();
+  89   2          Left_count=0;
+  90   2          Right_count=0;
+  91   2          printf("L=%0.1f,R=%0.1f",n_l,n_r);
+  92   2          Timer_100ms=0;
+  93   2        }
+  94   1        if(Timer_500ms>5000)
+  95   1        {
+  96   2          Timer_500ms=0;
+  97   2        }
+  98   1        pwm_output();
+  99   1      }
+ 100          void INT0_Routine() interrupt 0
+ 101          {
+ 102   1        Left_count++;
+ 103   1      }
+ 104          void INT1_Routine() interrupt 2
+ 105          {
+ 106   1        Right_count++;
+ 107   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1490    ----
+   CONSTANT SIZE    =     16    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =     58      25
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+C51 COMPILER V9.59.0.0   MAIN                                                              06/16/2023 18:06:41 PAGE 3   
+
+   BIT SIZE         =      1    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
