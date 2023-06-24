@@ -1,0 +1,308 @@
+C51 COMPILER V9.59.0.0   MAIN                                                              06/24/2023 14:59:30 PAGE 1   
+
+
+C51 COMPILER V9.59.0.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: F:\Keil\C51\BIN\C51.EXE main.c COMPACT OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings
+                    -\main.lst) TABS(2) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include <STC89C5xRC.H>
+   2          #include "stdio.h"
+   3          #include "LCD1602.h"
+   4          #include "motor_driver.h"
+   5          unsigned int Left_count=0;
+   6          unsigned int Right_count=0;
+   7          int n_l=0;
+   8          int n_r=0;
+   9          unsigned int Timer_100ms=0;
+  10          unsigned int Timer_450ms=0;
+  11          unsigned char LCD_buf_1[16];
+  12          unsigned char LCD_buf_2[16];
+  13          unsigned int x;
+  14          unsigned char state=0;
+  15          void Timer2_Init(void)    //10微秒@11.0592MHz
+  16          {
+  17   1        T2MOD = 0;        //初始化模式寄存器
+  18   1        T2CON = 0;        //初始化控制寄存器
+  19   1        TL2 = 0x66;       //设置定时初始值
+  20   1        TH2 = 0xFC;       //设置定时初始值
+  21   1        RCAP2L = 0x66;      //设置定时重载值
+  22   1        RCAP2H = 0xFC;      //设置定时重载值
+  23   1        TR2 = 1;        //定时器2开始计时
+  24   1        ET2 = 1;        //使能定时器2中断
+  25   1        EA = 1;
+  26   1      }
+  27          void Timer0_Init(void)    //1毫秒@11.0592MHz
+  28          {
+  29   1        TMOD &= 0xF0;     //设置定时器模式
+  30   1        TMOD |= 0x01;     //设置定时器模式
+  31   1        TL0 = 0x66;       //设置定时初始值
+  32   1        TH0 = 0xFC;       //设置定时初始值
+  33   1        TF0 = 0;        //清除TF0标志
+  34   1        TR0 = 1;        //定时器0开始计时
+  35   1        ET0 = 1;        //使能定时器0中断
+  36   1        PT0=1;
+  37   1        EA=1;
+  38   1      }
+  39          void INT0_Init()
+  40          {
+  41   1        IT0 = 1;
+  42   1        EX0 = 1;
+  43   1      }
+  44          void INT1_Init()
+  45          {
+  46   1        IT1 = 1;
+  47   1        EX1 = 1;
+  48   1      }
+  49          void Send_byte(unsigned char byte)
+  50          {
+  51   1        SBUF=byte;
+  52   1        while(TI==0);
+  53   1        TI=0;
+  54   1      }
+C51 COMPILER V9.59.0.0   MAIN                                                              06/24/2023 14:59:30 PAGE 2   
+
+  55          char putchar(char c){
+  56   1        Send_byte(c);
+  57   1        return c;  
+  58   1      }
+  59          void trail_detect()
+  60          {
+  61   1        if(state==3)
+  62   1        {
+  63   2          wheel(forward,5);
+  64   2          Delay_ms(50);
+  65   2          wheel(right,6);
+  66   2          Delay_ms(50);
+  67   2          if(P36==1)//中寻迹
+  68   2          {
+  69   3            wheel(forward,5);
+  70   3          }
+  71   2          else
+  72   2          {
+  73   3            wheel(left,5);
+  74   3            while(P27==0)
+  75   3            {
+  76   4              if(P20==0)
+  77   4              {
+  78   5                wheel(backward,5);
+  79   5                Delay_ms(200);
+  80   5                state++;
+  81   5                break;
+  82   5              }
+  83   4            }
+  84   3            wheel(right,5);
+  85   3            if(P20==0)
+  86   3            {
+  87   4              wheel(backward,5);
+  88   4              Delay_ms(200);
+  89   4              state++;
+  90   4            }
+  91   3          }
+  92   2            if(P20==0)
+  93   2            {
+  94   3              wheel(backward,5);
+  95   3              Delay_ms(200);
+  96   3              state++;
+  97   3            }
+  98   2        }
+  99   1          if(state==4)
+ 100   1          {
+ 101   2            state++;
+ 102   2            wheel(forward,0);
+ 103   2            Delay_ms(10);
+ 104   2            P22=0;
+ 105   2            P23=0;
+ 106   2            wheel(left,6);
+ 107   2            Delay_ms(300);
+ 108   2            wheel(forward,5);
+ 109   2            Delay_ms(350);
+ 110   2            wheel(right,6);
+ 111   2            Delay_ms(250);
+ 112   2            wheel(forward,5);
+ 113   2            Delay_ms(350);
+ 114   2            wheel(right,6);
+ 115   2            Delay_ms(250);
+ 116   2            wheel(forward,5);
+C51 COMPILER V9.59.0.0   MAIN                                                              06/24/2023 14:59:30 PAGE 3   
+
+ 117   2            Delay_ms(250);
+ 118   2            wheel(left,6);
+ 119   2            Delay_ms(250);
+ 120   2            P22=P23=1;
+ 121   2            
+ 122   2            wheel(forward,5);
+ 123   2          }
+ 124   1        if(state==5)
+ 125   1          { 
+ 126   2            wheel(forward,5);
+ 127   2            if(P36==1)
+ 128   2            {
+ 129   3              state++;
+ 130   3              P23=0;
+ 131   3              wheel(forward,5);
+ 132   3              Delay_ms(400);
+ 133   3              Turn_360();
+ 134   3              P23=1;
+ 135   3              wheel(forward,0);
+ 136   3              Delay_ms(10);
+ 137   3            }
+ 138   2          }
+ 139   1          if(state==6)
+ 140   1          {
+ 141   2            wheel(forward,0);
+ 142   2            Delay_ms(10);
+ 143   2          }
+ 144   1      }
+ 145          void avoid()
+ 146          {
+ 147   1        if(P20==0&&state!=3&&state!=0)//前避障
+ 148   1        {
+ 149   2          wheel(backward,5);
+ 150   2          Delay_ms(300);
+ 151   2          wheel(forward,5);
+ 152   2        }
+ 153   1        if(P34==0)//左避障
+ 154   1        {
+ 155   2          if(state==2)
+ 156   2          {
+ 157   3            state++;
+ 158   3            wheel(forward,5);
+ 159   3            Delay_ms(25);
+ 160   3            P24=0;
+ 161   3            P23=0;
+ 162   3            wheel(left,6);
+ 163   3            Delay_ms(200);
+ 164   3            P24=P23=1;
+ 165   3            wheel(forward,5);
+ 166   3            Delay_ms(400);
+ 167   3            P22=0;
+ 168   3            P23=0;
+ 169   3            wheel(right,6);
+ 170   3            Delay_ms(210);
+ 171   3            P22=P23=1;
+ 172   3            wheel(forward,5);
+ 173   3            Delay_ms(600);
+ 174   3          }
+ 175   2        }
+ 176   1        if(P35==0)//右避障
+ 177   1        {
+ 178   2          if(state==1)
+C51 COMPILER V9.59.0.0   MAIN                                                              06/24/2023 14:59:30 PAGE 4   
+
+ 179   2          {
+ 180   3            state++;
+ 181   3            wheel(forward,5);
+ 182   3            Delay_ms(200);
+ 183   3            P22=0;
+ 184   3            P23=0;
+ 185   3            wheel(right,6);
+ 186   3            Delay_ms(200);
+ 187   3            wheel(forward,0);
+ 188   3            Delay_ms(10);
+ 189   3            P22=1;
+ 190   3            P23=1;
+ 191   3            wheel(forward,5);
+ 192   3            Delay_ms(400);
+ 193   3            P24=0;
+ 194   3            P23=0;
+ 195   3            wheel(left,6);
+ 196   3            Delay_ms(200);
+ 197   3            wheel(forward,0);
+ 198   3            Delay_ms(10);
+ 199   3            P24=P23=1;
+ 200   3            wheel(forward,5);
+ 201   3          } 
+ 202   2        }
+ 203   1      }
+ 204          void main()
+ 205          {
+ 206   1        Timer0_Init();
+ 207   1        Timer2_Init();
+ 208   1        INT0_Init();
+ 209   1        INT1_Init();
+ 210   1        LCD_Init();
+ 211   1        P22=P23=P24=1;
+ 212   1        wheel(left,0);
+ 213   1        Delay_ms(500);
+ 214   1        while(1)
+ 215   1        {
+ 216   2          if(state==0)
+ 217   2          {
+ 218   3            state++;
+ 219   3            P22=0;
+ 220   3            P23=0;
+ 221   3            wheel(left,6);
+ 222   3            Delay_ms(200);
+ 223   3            P22=1;
+ 224   3            P23=1;
+ 225   3            wheel(forward,5);
+ 226   3            Delay_ms(450);
+ 227   3            P24=0;
+ 228   3            P23=0;
+ 229   3            wheel(right,6);
+ 230   3            Delay_ms(200);
+ 231   3            P24=1;
+ 232   3            P23=1;
+ 233   3            wheel(forward,5);
+ 234   3          }
+ 235   2          trail_detect();
+ 236   2          avoid();
+ 237   2        }
+ 238   1      }
+ 239          void Timer2_Routine(void) interrupt 5
+ 240          {
+C51 COMPILER V9.59.0.0   MAIN                                                              06/24/2023 14:59:30 PAGE 5   
+
+ 241   1        TF2 = 0;
+ 242   1        Timer_100ms++;
+ 243   1        Timer_450ms++;
+ 244   1        if(Timer_100ms>100)
+ 245   1        {
+ 246   2          n_l=Left_count;
+ 247   2          n_r=Right_count;
+ 248   2      //    PID_control();
+ 249   2          Left_count=0;
+ 250   2          Right_count=0;
+ 251   2          sprintf(LCD_buf_1,"L=%2dr/s",n_l);
+ 252   2          sprintf(LCD_buf_2,"R=%2dr/s",n_r);
+ 253   2          Timer_100ms=0;
+ 254   2        }
+ 255   1        if(Timer_450ms>450)
+ 256   1          {
+ 257   2            LCD_ShowString(1,1,LCD_buf_1);
+ 258   2            LCD_ShowString(2,1,LCD_buf_2);
+ 259   2            Timer_450ms=0;
+ 260   2          }
+ 261   1      }
+ 262          void Timer0_Isr() interrupt 1
+ 263          {
+ 264   1        TL0 = 0x66;       
+ 265   1        TH0 = 0xFC;       
+ 266   1        if(pwm_flag)
+ 267   1          pwm_output();
+ 268   1      }
+ 269          void INT0_Routine() interrupt 0
+ 270          {
+ 271   1        Left_count++;
+ 272   1      }
+ 273          void INT1_Routine() interrupt 2
+ 274          {
+ 275   1        Right_count++;
+ 276   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   2176    ----
+   CONSTANT SIZE    =     18    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =     79       7
+   DATA SIZE        =   ----       2
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      2    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
